@@ -1,8 +1,46 @@
 # MyAssist
 
-一个本地优先的生活、学习和出发准备管理工具。它把 To Do List、任务、Deadline、进度、收支、重要文件、计划和日记放在同一个轻量网页应用里，适合留学、搬家、备考、项目推进等需要大量本地资料管理的场景。
+**一个为留学生设计的生活与学习管理平台：把待办、课表、Deadline、进度、收支、重要文件、计划和日记放在同一个应用里。**
 
-A local-first life and study dashboard for managing daily to-dos, tasks, deadlines, progress, expenses, important documents, plans, and journals in one lightweight web app. It is designed for study abroad preparation, moving logistics, personal projects, and day-to-day organization.
+**A life and study dashboard built for international students: to-dos, timetable, deadlines, progress, expenses, important documents, plans and journals in one app.**
+
+![MyAssist 首页 / Home](docs/screenshots/home.jpg)
+
+## 解决什么问题 / Why MyAssist
+
+留学生的日常信息往往分散在很多地方：课表在学校系统，作业 Deadline 在课程网站，每天的待办写在备忘录，记账用另一个 App，护照、签证和合同散落在相册和邮箱里。MyAssist 把这些集中到一个地方，打开首页就能看到今天要做什么、今天有什么课、每个 Deadline 还剩几天、这个月的收支情况。
+
+For international students, daily information is scattered: the timetable sits in the university system, deadlines on course sites, to-dos in a notes app, expenses in another app, and passport, visa and lease documents across photos and email. MyAssist brings them into one place, so the home page shows today's tasks, today's classes, the time left before each deadline, and this month's spending.
+
+## 技术栈 / Tech Stack
+
+| 层 / Layer | 技术 / Technology |
+|---|---|
+| 前端 / Frontend | Next.js 15 (App Router)、React 19、TypeScript、Tailwind CSS |
+| 后端 / Backend | Next.js Route Handlers，按 Route Handler → Service → Repository 分层 / layered as Route Handler → Service → Repository |
+| 数据 / Data | 本地模式：Node.js SQLite；云端模式：Supabase PostgreSQL + Auth + Storage / Local mode: Node.js SQLite; cloud mode: Supabase PostgreSQL + Auth + Storage |
+| 桌面端 / Desktop | Electron |
+| 部署 / Deployment | Vercel |
+| 测试 / Testing | Vitest |
+
+## 工程亮点 / Engineering Highlights
+
+- **行级安全隔离 / Row-Level Security**：22 张用户私有表全部启用 PostgreSQL RLS，按 `auth.uid()` 隔离每个账号的数据。All 22 user-owned tables use PostgreSQL RLS keyed on `auth.uid()`.
+- **事务一致性 / Transactional writes**：11 条跨表写入流程由 7 个 PostgreSQL 事务函数完成，任一步失败整笔回滚。11 multi-table write flows run inside 7 PostgreSQL transaction functions, so a failure rolls back the whole operation.
+- **私有文件存储 / Private file storage**：文件存放在私有 Supabase Storage，只能通过 60 秒有效的签名链接或同源受保护接口访问。Files live in private Supabase Storage and are served only through 60-second signed URLs or a same-origin protected endpoint.
+- **外部日历导入的安全防护 / Hardened calendar import**：导入 ICS 课表链接时，限制协议、私网地址、跳转、超时、大小和内容类型。ICS feed fetching guards protocol, private-network addresses, redirects, timeouts, size and content type.
+- **测试覆盖 / Test coverage**：完整安全测试矩阵 292/292 通过，覆盖越权访问、事务失败和文件权限。The full security test matrix passes 292/292, covering cross-user access, transaction failures and file permissions.
+- **本地优先 / Local-first**：默认在本机 SQLite 运行，个人数据不进 Git；也可以切换到云端模式多设备同步。Runs on local SQLite by default with personal data kept out of Git, and can switch to a cloud mode for multi-device sync.
+
+## 截图 / Screenshots
+
+![任务中心 / Tasks](docs/screenshots/tasks.jpg)
+
+截图使用的是演示数据。Screenshots use demo data.
+
+## 文档 / Documentation
+
+架构设计、安全模型、迁移计划和测试报告都在 [`docs/`](docs/README.md) 目录。Architecture, security model, migration plans and test reports are in [`docs/`](docs/README.md).
 
 ## 核心特点 / Highlights
 
@@ -202,25 +240,25 @@ Cloud 文件仍保存在 private Supabase Storage。图片缩略图和预览通�
 - 实时同步：浏览器和桌面端订阅 `GET /api/events` 的 Server-Sent Events；任意写入 API 成功后广播 `data-change`，其他窗口静默重新请求数据库真实状态。
 - 日志：`~/Library/Logs/Leo的生活学习助手/desktop.log`。
 
-Repository backend 默认且当前只支持 `sqlite`。如果 `DATA_BACKEND` 设置为未实现的值，应用会明确报错，不会静默回退到本地 SQLite。Phase 1 进度和剩余基础设施路由见 `REPOSITORY_MIGRATION_PROGRESS.md`，已知迁移数据例外见 `MIGRATION_KNOWN_ISSUES.md`。
+Repository backend 默认且当前只支持 `sqlite`。如果 `DATA_BACKEND` 设置为未实现的值，应用会明确报错，不会静默回退到本地 SQLite。Phase 1 进度和剩余基础设施路由见 [`REPOSITORY_MIGRATION_PROGRESS.md`](docs/REPOSITORY_MIGRATION_PROGRESS.md)，已知迁移数据例外见 [`MIGRATION_KNOWN_ISSUES.md`](docs/MIGRATION_KNOWN_ISSUES.md)。
 
-Phase 2 最初建立了 21 张 PostgreSQL 业务表；后续“纯文档”功能新增 `secure_documents`，当前共 22 张用户私有业务表。每张表都有 owner `user_id` 并按 `auth.uid()` 隔离；独立管理员账号只由 server-only `ADMIN_USER_ID` 判断。详情见 `SUPABASE_RLS_MATRIX.md`、`ADMIN_ARCHITECTURE.md` 和 `SUPABASE_PHASE2_PROGRESS.md`。本地模式仍使用 SQLite，没有迁移真实数据。
+Phase 2 最初建立了 21 张 PostgreSQL 业务表；后续“纯文档”功能新增 `secure_documents`，当前共 22 张用户私有业务表。每张表都有 owner `user_id` 并按 `auth.uid()` 隔离；独立管理员账号只由 server-only `ADMIN_USER_ID` 判断。详情见 [`SUPABASE_RLS_MATRIX.md`](docs/SUPABASE_RLS_MATRIX.md)、[`ADMIN_ARCHITECTURE.md`](docs/ADMIN_ARCHITECTURE.md) 和 [`SUPABASE_PHASE2_PROGRESS.md`](docs/SUPABASE_PHASE2_PROGRESS.md)。本地模式仍使用 SQLite，没有迁移真实数据。
 
-Phase 2.5 已在 Sydney 隔离 Supabase 测试项目应用两份 migration，并用 User A、User B、Admin Account 完成 36 项真实 Auth/PostgreSQL/RLS/Storage 安全测试。详情见 `SUPABASE_REMOTE_VALIDATION.md`、`SUPABASE_SECURITY_TEST_RESULTS.md` 和 `SUPABASE_PHASE2_5_PROGRESS.md`。这不会切换当前 SQLite backend。
+Phase 2.5 已在 Sydney 隔离 Supabase 测试项目应用两份 migration，并用 User A、User B、Admin Account 完成 36 项真实 Auth/PostgreSQL/RLS/Storage 安全测试。详情见 [`SUPABASE_REMOTE_VALIDATION.md`](docs/SUPABASE_REMOTE_VALIDATION.md)、[`SUPABASE_SECURITY_TEST_RESULTS.md`](docs/SUPABASE_SECURITY_TEST_RESULTS.md) 和 [`SUPABASE_PHASE2_5_PROGRESS.md`](docs/SUPABASE_PHASE2_5_PROGRESS.md)。这不会切换当前 SQLite backend。
 
-Phase 3 使用双模式过渡：默认 `DATA_BACKEND=sqlite`、`AUTH_REQUIRED=false`，现有本地应用不要求登录，也不会改变当前 SQLite 或 uploads。隔离 Auth 测试模式使用 Supabase Auth + 系统临时目录中的专用空 SQLite；必须同时设置 `TEST_DATABASE=true`、`AUTH_TEST_DATA_ROOT` 和全部 `LEO_*` 测试路径。任一路径指向真实 Application Support、仓库真实数据或临时根目录之外时，应用会 fail closed。详情见 `AUTH_ARCHITECTURE.md`、`SUPABASE_PHASE3_AUTH.md` 和 `AUTH_SECURITY_TEST_RESULTS.md`。
+Phase 3 使用双模式过渡：默认 `DATA_BACKEND=sqlite`、`AUTH_REQUIRED=false`，现有本地应用不要求登录，也不会改变当前 SQLite 或 uploads。隔离 Auth 测试模式使用 Supabase Auth + 系统临时目录中的专用空 SQLite；必须同时设置 `TEST_DATABASE=true`、`AUTH_TEST_DATA_ROOT` 和全部 `LEO_*` 测试路径。任一路径指向真实 Application Support、仓库真实数据或临时根目录之外时，应用会 fail closed。详情见 [`AUTH_ARCHITECTURE.md`](docs/AUTH_ARCHITECTURE.md)、[`SUPABASE_PHASE3_AUTH.md`](docs/SUPABASE_PHASE3_AUTH.md) 和 [`AUTH_SECURITY_TEST_RESULTS.md`](docs/AUTH_SECURITY_TEST_RESULTS.md)。
 
 Phase 3 已提供邮箱注册、登录、SSR Cookie Session、退出、忘记密码、重置密码、Auth callback、页面/API 保护和独立 Admin 身份检查。Phase 4 在此基础上增加核心 Supabase Repository；SQLite 模式下仍不会把现有本地数据猜测绑定给任何账号。
 
 Phase 4 核心 Repository 已实现：Settings、Tasks/Progress/Subtasks、To Do、Plans、Journal 和 Expenses 可在 `DATA_BACKEND=supabase`、`AUTH_REQUIRED=true` 时通过当前 Session `user.id` 访问 Supabase，并由 RLS 与 owner-aware 外键隔离。课程、课表、文件、重要文件和真实 Storage 暂未切换；Cloud mode 会明确拒绝 SQLite-only Repository，离线 replay 也会返回 `409`，不会静默回退或重复写入。现有 282 行 SQLite 与 4 个本地文件没有迁移。
 
-Phase 4 详情和 API 状态见 `SUPABASE_PHASE4_REPOSITORIES.md`、`SUPABASE_REPOSITORY_PROGRESS.md` 与 `CLOUD_DATA_ISOLATION_TEST_RESULTS.md`。
+Phase 4 详情和 API 状态见 [`SUPABASE_PHASE4_REPOSITORIES.md`](docs/SUPABASE_PHASE4_REPOSITORIES.md)、[`SUPABASE_REPOSITORY_PROGRESS.md`](docs/SUPABASE_REPOSITORY_PROGRESS.md) 与 [`CLOUD_DATA_ISOLATION_TEST_RESULTS.md`](docs/CLOUD_DATA_ISOLATION_TEST_RESULTS.md)。
 
-Phase 4.5 已为 Task/Progress、Plan/Journal、To Do 与 Finance 的 11 条多表写入流程增加 7 个 PostgreSQL 事务函数。函数使用 `security invoker`，owner 只来自 `auth.uid()`，现有 RLS 与跨用户复合外键继续生效；任一子步骤失败时整笔业务写入回滚。13 项真实远程事务测试与原有测试合计 223/223 通过，partial state 与越权成功均为 0。默认 SQLite 模式、282 行真实数据和 4 个本地文件未改变。详情见 `SUPABASE_TRANSACTION_AUDIT.md`、`SUPABASE_TRANSACTION_RPCS.md` 与 `TRANSACTION_FAILURE_TEST_RESULTS.md`。
+Phase 4.5 已为 Task/Progress、Plan/Journal、To Do 与 Finance 的 11 条多表写入流程增加 7 个 PostgreSQL 事务函数。函数使用 `security invoker`，owner 只来自 `auth.uid()`，现有 RLS 与跨用户复合外键继续生效；任一子步骤失败时整笔业务写入回滚。13 项真实远程事务测试与原有测试合计 223/223 通过，partial state 与越权成功均为 0。默认 SQLite 模式、282 行真实数据和 4 个本地文件未改变。详情见 [`SUPABASE_TRANSACTION_AUDIT.md`](docs/SUPABASE_TRANSACTION_AUDIT.md)、[`SUPABASE_TRANSACTION_RPCS.md`](docs/SUPABASE_TRANSACTION_RPCS.md) 与 [`TRANSACTION_FAILURE_TEST_RESULTS.md`](docs/TRANSACTION_FAILURE_TEST_RESULTS.md)。
 
-Phase 5 已增加 Supabase Timetable Repository：Cloud mode 可按当前账号查询课程/课表，预览和确认 ICS/Calendar Feed，处理 RRULE、RDATE、EXDATE、RECURRENCE-ID 例外与取消，并编辑或软取消 occurrence。三表 confirm 由单个 `security invoker` PostgreSQL RPC 原子执行，重复来源使用 SHA-256 `sourceKey`，实例 identity 保持 `(user_id, sourceId, externalUid, occurrenceStart)`。Feed 获取增加协议、私网/DNS、跳转、超时、大小和内容类型保护。新增 43 项测试后完整矩阵为 266/266；真实本地 1 个 source、16 个 timetable courses、165 个 occurrences 与 4 个 uploads 未迁移。详情见 `SUPABASE_PHASE5_TIMETABLE.md`、`SUPABASE_TIMETABLE_AUDIT.md`、`TIMETABLE_TIMEZONE_POLICY.md` 与 `TIMETABLE_CLOUD_TEST_RESULTS.md`。
+Phase 5 已增加 Supabase Timetable Repository：Cloud mode 可按当前账号查询课程/课表，预览和确认 ICS/Calendar Feed，处理 RRULE、RDATE、EXDATE、RECURRENCE-ID 例外与取消，并编辑或软取消 occurrence。三表 confirm 由单个 `security invoker` PostgreSQL RPC 原子执行，重复来源使用 SHA-256 `sourceKey`，实例 identity 保持 `(user_id, sourceId, externalUid, occurrenceStart)`。Feed 获取增加协议、私网/DNS、跳转、超时、大小和内容类型保护。新增 43 项测试后完整矩阵为 266/266；真实本地 1 个 source、16 个 timetable courses、165 个 occurrences 与 4 个 uploads 未迁移。详情见 [`SUPABASE_PHASE5_TIMETABLE.md`](docs/SUPABASE_PHASE5_TIMETABLE.md)、[`SUPABASE_TIMETABLE_AUDIT.md`](docs/SUPABASE_TIMETABLE_AUDIT.md)、[`TIMETABLE_TIMEZONE_POLICY.md`](docs/TIMETABLE_TIMEZONE_POLICY.md) 与 [`TIMETABLE_CLOUD_TEST_RESULTS.md`](docs/TIMETABLE_CLOUD_TEST_RESULTS.md)。
 
-Phase 6 已增加 Supabase File Repository 与私有 Storage 生命周期：Cloud mode 支持 PDF/JPEG/PNG/WebP（最大 10 MiB）、SHA-256、Important Files、Expense 小票、60 秒 signed URL，以及 `pending_delete` 删除补偿。对象路径固定为当前账号前缀，普通 Admin API 也不能跨用户读取文件；Storage 删除前后都会验证真实对象状态。完整测试矩阵为 292/292，文件越权与 partial invisible state 均为 0。真实 SQLite、WAL/SHM 和 4 个 uploads 哈希未变化，也没有上传到测试项目。详情见 `SUPABASE_PHASE6_STORAGE.md`、`SUPABASE_STORAGE_AUDIT.md`、`STORAGE_SECURITY_MODEL.md`、`STORAGE_CLOUD_TEST_RESULTS.md` 与 `FILE_DELETE_COMPENSATION_POLICY.md`。
+Phase 6 已增加 Supabase File Repository 与私有 Storage 生命周期：Cloud mode 支持 PDF/JPEG/PNG/WebP（最大 10 MiB）、SHA-256、Important Files、Expense 小票、60 秒 signed URL，以及 `pending_delete` 删除补偿。对象路径固定为当前账号前缀，普通 Admin API 也不能跨用户读取文件；Storage 删除前后都会验证真实对象状态。完整测试矩阵为 292/292，文件越权与 partial invisible state 均为 0。真实 SQLite、WAL/SHM 和 4 个 uploads 哈希未变化，也没有上传到测试项目。详情见 [`SUPABASE_PHASE6_STORAGE.md`](docs/SUPABASE_PHASE6_STORAGE.md)、[`SUPABASE_STORAGE_AUDIT.md`](docs/SUPABASE_STORAGE_AUDIT.md)、[`STORAGE_SECURITY_MODEL.md`](docs/STORAGE_SECURITY_MODEL.md)、[`STORAGE_CLOUD_TEST_RESULTS.md`](docs/STORAGE_CLOUD_TEST_RESULTS.md) 与 [`FILE_DELETE_COMPENSATION_POLICY.md`](docs/FILE_DELETE_COMPENSATION_POLICY.md)。
 
 Phase 7 已加入正式账号和支持入口：注册要求全局唯一用户名、邮箱和密码，登录支持“用户名或邮箱 + 密码”；用户名存入 `profiles` 并使用大小写不敏感唯一约束。找回密码继续使用 Supabase Auth 安全邮件流程，“联系开发者”允许登录用户或匿名访客留言。`developer_messages` 不开放任何客户端读取策略，只有受保护的 Admin API 可以查看和更新状态。
 
